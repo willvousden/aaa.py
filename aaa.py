@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 Plot the elevation profile from CSVs produced by GPS Visualizer.
 
@@ -5,6 +6,7 @@ Plot the elevation profile from CSVs produced by GPS Visualizer.
 
 from __future__ import print_function, division
 
+import argparse
 import itertools
 import matplotlib as mpl
 import matplotlib.pyplot as pp
@@ -13,6 +15,7 @@ import sys
 
 pp.style.use('ggplot')
 
+_KM_FACTOR = 1000
 _EARTH_RADIUS_KM = 6367
 _COLOURS = itertools.cycle(mpl.rcParams['axes.prop_cycle'].by_key()['color'])
 
@@ -50,49 +53,66 @@ def smooth(x, y, size):
             (y[s:] - y[:-s]) / size)
 
 
-if __name__ == '__main__':
+def main(argv):
+    parser = argparse.ArgumentParser(prog=argv[0],
+                                     description=__doc__)
+    parser.add_argument('-i', '--input',
+                        help='The track file name.')
+    parser.add_argument('-o', '--output',
+                        help='The figure file name.')
+    parser.add_argument('--splits',
+                        metavar='DISTANCE',
+                        help='Calculate climb for splits of this distance '
+                             '(in km).',
+                        required=False)
+    args = parser.parse_args()
+
+    # Load AAA climb rating data.
     aaa_dist, aaa_climb = np.loadtxt('aaa.csv').T
 
     f, axes = pp.subplots(3, 1, sharex=True)
     a1, a2, a3 = axes
-    dists = []
-    for path in sys.argv[1:]:
-        data = np.loadtxt(path, usecols=[1, 2, 3], skiprows=1)
-        km_factor = 1000
+    #  data = np.loadtxt(args.input, usecols=[1, 2, 3], skiprows=1)
+    data = np.loadtxt(args.input, usecols=[0, 1, 2], skiprows=1)
 
-        dist = accumulate(data[:, 0], data[:, 1])
-        elev = data[:, 2]
+    dist = accumulate(data[:, 0], data[:, 1])
+    elev = data[:, 2]
 
-        dist_ = np.arange(dist[0], dist[-1], 1 / km_factor)
-        elev = np.interp(dist_, dist, elev)
-        dist = dist_
+    dist_ = np.arange(dist[0], dist[-1], 1 / _KM_FACTOR)
+    elev = np.interp(dist_, dist, elev)
+    dist = dist_
 
-        climb = np.cumsum(np.maximum(0, np.diff(elev)))
+    climb = np.cumsum(np.maximum(0, np.diff(elev)))
 
-        a1.plot(*smooth(dist, elev, 20))
-        a1.set_ylabel('Elevation (m)')
-        a1.set_xlim(dist[0], dist[-1])
+    a1.plot(*smooth(dist, elev, 20))
+    a1.set_ylabel('Elevation (m)')
+    a1.set_xlim(dist[0], dist[-1])
 
-        a2.plot(dist[1:], climb)
-        a2.set_ylabel('Total climb (m)')
+    a2.plot(dist[1:], climb)
+    a2.set_ylabel('Total climb (m)')
 
-        aaa_distances = np.arange(50, 300, 50)
-        for colour, d in zip(_COLOURS, aaa_distances):
-            n = d * km_factor
-            c = np.interp(d, aaa_dist, aaa_climb)
-            rolling_sum = climb[n:] - climb[:-n]
-            a3.plot(dist[n//2+1:-n//2],
-                    rolling_sum,
-                    color=colour,
-                    label='{} km'.format(d))
-            a3.axhline(y=c,
-                       dashes=(3, 2),
-                       color=colour)
-            if np.any(rolling_sum >= c):
-                aaa_points = np.round(np.max(rolling_sum) / 250) / 4
+    aaa_distances = np.arange(50, 700, 100)
+    for colour, d in zip(_COLOURS, aaa_distances):
+        n = d * _KM_FACTOR
+        c = np.interp(d, aaa_dist, aaa_climb)
+        rolling_sum = climb[n:] - climb[:-n]
+        a3.plot(dist[n//2+1:-n//2],
+                rolling_sum,
+                color=colour,
+                label='{} km'.format(d))
+        a3.axhline(y=c,
+                   dashes=(3, 2),
+                   color=colour)
+        if np.any(rolling_sum >= c):
+            aaa_points = np.round(np.max(rolling_sum) / 250) / 4
 
-        print('AAA points: {}'.format(aaa_points))
-        a3.legend(loc='upper right')
-        a3.set_ylabel('AAA climb (m)')
-        a3.set_xlabel('Distance (km)')
-    pp.show()
+    print('AAA points: {}'.format(aaa_points))
+    a3.legend(loc='upper right')
+    a3.set_ylabel('AAA climb (m)')
+    a3.set_xlabel('Distance (km)')
+
+    f.savefig(args.output)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
