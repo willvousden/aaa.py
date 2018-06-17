@@ -52,8 +52,8 @@ def get_elevation(path):
     elif path.endswith('.csv'):
         distance, elevation = read_csv(path)
     else:
-        print('Unknown input file format.')
-        return 1
+        raise ArgumentError('Unknown input file format: {}'
+                            .format(path))
 
     # Re-sample at 1 metre.
     distance, elevation = resample(distance, elevation, 1 / _KM_FACTOR)
@@ -146,8 +146,6 @@ def splits_plot(args):
     f, axes = pp.subplots(3, 1, sharex=True)
     a1, a2, a3 = axes
 
-    bins = np.arange(0, distance[-1], args.length)
-
     a1.plot(*smooth(distance, elevation, 20),
             color=_COLOURS[0])
     a1.plot(*smooth(distance, elevation, 20 * _KM_FACTOR),
@@ -159,6 +157,7 @@ def splits_plot(args):
     a2.plot(distance, climb)
     a2.set_ylabel('Total climb (m)')
 
+    bins = np.arange(0, distance[-1], args.length)
     a3.hist(distance,
             bins=bins,
             weights=np.concatenate(([0], np.diff(climb))) / args.length)
@@ -178,7 +177,8 @@ def main(argv):
     parser_splits = subparsers.add_parser('splits')
     parser_splits.add_argument('-o', '--output',
                                help='The figure file name.')
-    parser_splits.add_argument('--length',
+    parser_splits.add_argument('-l', '--length',
+                               type=int,
                                metavar='DISTANCE',
                                help='Calculate climb for splits of this distance '
                                '(in km).  Default: %(default)s',
@@ -192,7 +192,6 @@ def main(argv):
     parser_aaa.set_defaults(target=aaa_plot)
 
     args = parser.parse_args()
-
     figure = args.target(args)
     if args.output:
         figure.savefig(args.output, dpi=300)
