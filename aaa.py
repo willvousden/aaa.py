@@ -52,7 +52,7 @@ def get_elevation(path):
     elif path.endswith(".csv"):
         distance, elevation = read_csv(path)
     else:
-        raise ArgumentError("Unknown input file format: {}".format(path))
+        raise ArgumentError(f"Unknown input file format: {path}")
 
     # Re-sample at 1 metre.
     distance, elevation = resample(distance, elevation, 1 / _KM_FACTOR)
@@ -123,13 +123,13 @@ def aaa_plot(args):
             distance[n // 2 + 1 : -n // 2],
             rolling_sum,
             color=colour,
-            label="{} km".format(d),
+            label=f"{d} km",
         )
         a3.axhline(y=c, dashes=(3, 2), color=colour)
         if np.any(rolling_sum >= c):
             aaa_points = np.round(np.max(rolling_sum) / 250) / 4
 
-    print("AAA points: {}".format(aaa_points))
+    print(f"AAA points: {aaa_points}")
     a3.legend(loc="upper right")
     a3.set_ylabel("AAA climb (m)")
     a3.set_xlabel("Distance (km)")
