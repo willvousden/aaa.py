@@ -119,7 +119,7 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
     # Load AAA climb rating presets.
     aaa_dist, aaa_climb = np.loadtxt(AAA_CSV_PATH).T
 
-    f, axes = pp.subplots(3, 1, sharex=True, dpi=300)
+    f, axes = pp.subplots(3, 1, sharex=True)
     a1, a2, a3 = axes
     a1.plot(*smooth(distance, elevation, 20))
     a1.set_ylabel("Elevation (m)")
@@ -135,7 +135,7 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
         c = np.interp(d, aaa_dist, aaa_climb)
         rolling_sum = climb[n:] - climb[:-n]
         a3.plot(
-            distance[n // 2 + 1 : -n // 2],
+            distance[int(np.ceil(n / 2)) : -int(np.floor(n / 2))],
             rolling_sum,
             color=colour,
             label=f"{d} km",
@@ -211,7 +211,7 @@ def main(argv: list[str]) -> int:
     if args.output:
         figure.savefig(args.output, dpi=300)
     else:
-        pp.show(figure)
+        pp.show()
     return 0
 
 
