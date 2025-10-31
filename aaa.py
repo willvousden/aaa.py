@@ -4,8 +4,6 @@ Plot the elevation profile from CSVs produced by GPS Visualizer.
 
 """
 
-from __future__ import print_function, division
-
 import argparse
 import gpxpy
 import itertools
@@ -13,8 +11,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as pp
 import numpy as np
 import sys
-
-pp.style.use("seaborn")
 
 _KM_FACTOR = 1000
 _EARTH_RADIUS_KM = 6367
