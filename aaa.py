@@ -17,13 +17,15 @@ import sys
 from pathlib import Path
 
 
-_KM_FACTOR = 1000
-_EARTH_RADIUS_KM = 6367
-_COLOURS = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+AAA_CSV_PATH = Path("aaa.csv")
+KM_FACTOR = 1000
+EARTH_RADIUS = 6367
+COLOURS = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
 
 
 def read_csv(
-    path: Path, columns: list[int] | None = None
+    path: Path,
+    columns: list[int] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     if columns is None:
         columns = [0, 1, 2]
@@ -63,11 +65,16 @@ def get_elevation(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         raise ValueError(f"Unknown input file format: {path}")
 
     # Re-sample at 1 metre.
-    distance, elevation = resample(distance, elevation, 1 / _KM_FACTOR)
+    distance, elevation = resample(distance, elevation, 1 / KM_FACTOR)
     return distance, elevation, get_climb(elevation)
 
 
-def haversine(lon1, lat1, lon2, lat2):
+def haversine(
+    lon1: np.ndarray,
+    lat1: np.ndarray,
+    lon2: np.ndarray,
+    lat2: np.ndarray,
+) -> np.ndarray:
     """
     Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
@@ -83,7 +90,7 @@ def haversine(lon1, lat1, lon2, lat2):
     a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
     c = 2 * np.arcsin(np.sqrt(a))
 
-    return _EARTH_RADIUS_KM * c
+    return EARTH_RADIUS * c
 
 
 def accumulate(lat: np.ndarray, long: np.ndarray) -> np.ndarray:
@@ -112,8 +119,7 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
     distance, elevation, climb = get_elevation(args.input)
 
     # Load AAA climb rating presets.
-    aaa_csv_path = Path("aaa.csv")
-    aaa_dist, aaa_climb = np.loadtxt(aaa_csv_path).T
+    aaa_dist, aaa_climb = np.loadtxt(AAA_CSV_PATH).T
 
     f, axes = pp.subplots(3, 1, sharex=True, dpi=300)
     a1, a2, a3 = axes
@@ -126,8 +132,8 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
 
     aaa_distances = np.arange(50, 700, 100)
     aaa_points = 0.0
-    for colour, d in zip(itertools.cycle(_COLOURS), aaa_distances):
-        n = d * _KM_FACTOR
+    for colour, d in zip(itertools.cycle(COLOURS), aaa_distances):
+        n = d * KM_FACTOR
         c = np.interp(d, aaa_dist, aaa_climb)
         rolling_sum = climb[n:] - climb[:-n]
         a3.plot(
@@ -156,10 +162,8 @@ def splits_plot(args: argparse.Namespace) -> mpl.figure.Figure:
     f, axes = pp.subplots(3, 1, sharex=True)
     a1, a2, a3 = axes
 
-    a1.plot(*smooth(distance, elevation, 20), color=_COLOURS[0])
-    a1.plot(
-        *smooth(distance, elevation, 20 * _KM_FACTOR), alpha=0.75, color=_COLOURS[0]
-    )
+    a1.plot(*smooth(distance, elevation, 20), color=COLOURS[0])
+    a1.plot(*smooth(distance, elevation, 20 * KM_FACTOR), alpha=0.75, color=COLOURS[0])
     a1.set_ylabel("Elevation (m)")
     a1.set_xlim(distance[0], distance[-1])
 
