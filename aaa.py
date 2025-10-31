@@ -22,7 +22,7 @@ _COLOURS = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
 
 
 def read_csv(path, columns=[0, 1, 2]):
-    data = np.loadtxt(args.input, usecols=columns, skiprows=1)
+    data = np.loadtxt(path, usecols=columns, skiprows=1)
     lat, long, elev = data.T
     distance = accumulate(lat, long)
     return distance, elev
@@ -52,7 +52,7 @@ def get_elevation(path):
     elif path.endswith(".csv"):
         distance, elevation = read_csv(path)
     else:
-        raise ArgumentError(f"Unknown input file format: {path}")
+        raise ValueError(f"Unknown input file format: {path}")
 
     # Re-sample at 1 metre.
     distance, elevation = resample(distance, elevation, 1 / _KM_FACTOR)
@@ -84,10 +84,9 @@ def accumulate(lat, long):
 
 
 def smooth(x, y, size):
-    s = size
-    l = size // 2
+    half_size = size // 2
     y = np.cumsum(y)
-    return (x[l:-l], (y[s:] - y[:-s]) / size)
+    return (x[half_size:-half_size], (y[size:] - y[:-size]) / size)
 
 
 def get_climb(elevation):
