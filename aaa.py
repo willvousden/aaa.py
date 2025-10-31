@@ -4,6 +4,8 @@ Plot the elevation profile from CSVs produced by GPS Visualizer.
 
 """
 
+from __future__ import annotations
+
 import argparse
 import gpxpy
 import itertools
@@ -12,13 +14,16 @@ import matplotlib.pyplot as pp
 import numpy as np
 import sys
 
+from pathlib import Path
+
+
 _KM_FACTOR = 1000
 _EARTH_RADIUS_KM = 6367
 _COLOURS = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
 
 
 def read_csv(
-    path: str, columns: list[int] | None = None
+    path: Path, columns: list[int] | None = None
 ) -> tuple[np.ndarray, np.ndarray]:
     if columns is None:
         columns = [0, 1, 2]
@@ -28,8 +33,8 @@ def read_csv(
     return distance, elev
 
 
-def read_gpx(path: str) -> tuple[np.ndarray, np.ndarray]:
-    with open(path, "r") as f:
+def read_gpx(path: Path) -> tuple[np.ndarray, np.ndarray]:
+    with path.open("r") as f:
         gpx = gpxpy.parse(f)
 
     lat: list[float] = []
@@ -49,10 +54,10 @@ def read_gpx(path: str) -> tuple[np.ndarray, np.ndarray]:
     return distance, elev_arr
 
 
-def get_elevation(path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    if path.endswith(".gpx"):
+def get_elevation(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    if path.suffix == ".gpx":
         distance, elevation = read_gpx(path)
-    elif path.endswith(".csv"):
+    elif path.suffix == ".csv":
         distance, elevation = read_csv(path)
     else:
         raise ValueError(f"Unknown input file format: {path}")
@@ -92,7 +97,7 @@ def smooth(x: np.ndarray, y: np.ndarray, size: int) -> tuple[np.ndarray, np.ndar
     return (x[half_size:-half_size], (y_cumsum[size:] - y_cumsum[:-size]) / size)
 
 
-def get_climb(elevation):
+def get_climb(elevation: np.ndarray) -> np.ndarray:
     return np.concatenate(([0], np.cumsum(np.maximum(0, np.diff(elevation)))))
 
 
@@ -107,7 +112,8 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
     distance, elevation, climb = get_elevation(args.input)
 
     # Load AAA climb rating presets.
-    aaa_dist, aaa_climb = np.loadtxt("aaa.csv").T
+    aaa_csv_path = Path("aaa.csv")
+    aaa_dist, aaa_climb = np.loadtxt(aaa_csv_path).T
 
     f, axes = pp.subplots(3, 1, sharex=True, dpi=300)
     a1, a2, a3 = axes
@@ -145,7 +151,7 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
 def splits_plot(args: argparse.Namespace) -> mpl.figure.Figure:
     if args.input is None:
         raise ValueError("Input file is required")
-    distance, elevation, climb = get_elevation(args.input)
+    distance, elevation, climb = get_elevation(Path(args.input))
 
     f, axes = pp.subplots(3, 1, sharex=True)
     a1, a2, a3 = axes
@@ -172,11 +178,13 @@ def splits_plot(args: argparse.Namespace) -> mpl.figure.Figure:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog=argv[0], description=__doc__)
-    parser.add_argument("-i", "--input", help="The track file name.")
+    parser.add_argument("-i", "--input", type=Path, help="The track file name.")
     subparsers = parser.add_subparsers()
 
     parser_splits = subparsers.add_parser("splits")
-    parser_splits.add_argument("-o", "--output", help="The figure file name.")
+    parser_splits.add_argument(
+        "-o", "--output", type=Path, help="The figure file name."
+    )
     parser_splits.add_argument(
         "-l",
         "--length",
@@ -190,7 +198,7 @@ def main(argv: list[str]) -> int:
     parser_splits.set_defaults(target=splits_plot)
 
     parser_aaa = subparsers.add_parser("aaa")
-    parser_aaa.add_argument("-o", "--output", help="The figure file name.")
+    parser_aaa.add_argument("-o", "--output", type=Path, help="The figure file name.")
     parser_aaa.set_defaults(target=aaa_plot)
 
     args = parser.parse_args()
