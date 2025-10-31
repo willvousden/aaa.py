@@ -4,8 +4,6 @@ Plot the elevation profile from CSVs produced by GPS Visualizer.
 
 """
 
-from __future__ import annotations
-
 import argparse
 import gpxpy
 import itertools
