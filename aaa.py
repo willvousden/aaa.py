@@ -10,9 +10,13 @@ import itertools
 import matplotlib as mpl
 import matplotlib.pyplot as pp
 import numpy as np
+import numpy.typing as npt
 import sys
 
+from matplotlib.figure import Figure
 from pathlib import Path
+
+type FloatVector = npt.NDArray[np.float64]
 
 
 AAA_CSV_PATH = Path("aaa.csv")
@@ -24,7 +28,7 @@ COLOURS = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
 def read_csv(
     path: Path,
     columns: list[int] | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[FloatVector, FloatVector]:
     if columns is None:
         columns = [0, 1, 2]
     data = np.loadtxt(path, usecols=columns, skiprows=1)
@@ -33,7 +37,7 @@ def read_csv(
     return distance, elev
 
 
-def read_gpx(path: Path) -> tuple[np.ndarray, np.ndarray]:
+def read_gpx(path: Path) -> tuple[FloatVector, FloatVector]:
     with path.open("r") as f:
         gpx = gpxpy.parse(f)
 
@@ -54,7 +58,7 @@ def read_gpx(path: Path) -> tuple[np.ndarray, np.ndarray]:
     return distance, elev_arr
 
 
-def get_elevation(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_elevation(path: Path) -> tuple[FloatVector, FloatVector, FloatVector]:
     if path.suffix == ".gpx":
         distance, elevation = read_gpx(path)
     elif path.suffix == ".csv":
@@ -68,11 +72,11 @@ def get_elevation(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def haversine(
-    lon1: np.ndarray,
-    lat1: np.ndarray,
-    lon2: np.ndarray,
-    lat2: np.ndarray,
-) -> np.ndarray:
+    lon1: FloatVector,
+    lat1: FloatVector,
+    lon2: FloatVector,
+    lat2: FloatVector,
+) -> FloatVector:
     """
     Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
@@ -91,27 +95,31 @@ def haversine(
     return EARTH_RADIUS * c
 
 
-def accumulate(lat: np.ndarray, long: np.ndarray) -> np.ndarray:
+def accumulate(lat: FloatVector, long: FloatVector) -> FloatVector:
     distance = np.cumsum(haversine(long[:-1], lat[:-1], long[1:], lat[1:]))
     return np.concatenate(([0], distance))
 
 
-def smooth(x: np.ndarray, y: np.ndarray, size: int) -> tuple[np.ndarray, np.ndarray]:
+def smooth(
+    x: FloatVector, y: FloatVector, size: int
+) -> tuple[FloatVector, FloatVector]:
     half_size = size // 2
     y_cumsum = np.cumsum(y)
     return (x[half_size:-half_size], (y_cumsum[size:] - y_cumsum[:-size]) / size)
 
 
-def get_climb(elevation: np.ndarray) -> np.ndarray:
+def get_climb(elevation: FloatVector) -> FloatVector:
     return np.concatenate(([0], np.cumsum(np.maximum(0, np.diff(elevation)))))
 
 
-def resample(x: np.ndarray, y: np.ndarray, dx: float) -> tuple[np.ndarray, np.ndarray]:
+def resample(
+    x: FloatVector, y: FloatVector, dx: float
+) -> tuple[FloatVector, FloatVector]:
     x_ = np.arange(x[0], x[-1], dx)
     return x_, np.interp(x_, x, y)
 
 
-def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
+def aaa_plot(args: argparse.Namespace) -> Figure:
     if args.input is None:
         raise ValueError("Input file is required")
     distance, elevation, climb = get_elevation(args.input)
@@ -152,7 +160,7 @@ def aaa_plot(args: argparse.Namespace) -> mpl.figure.Figure:
     return f
 
 
-def splits_plot(args: argparse.Namespace) -> mpl.figure.Figure:
+def splits_plot(args: argparse.Namespace) -> Figure:
     if args.input is None:
         raise ValueError("Input file is required")
     distance, elevation, climb = get_elevation(Path(args.input))
