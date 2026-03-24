@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "numpy>=2.4.2",
+    "numpy>=2.4.3",
     "matplotlib>=3.10.8,<4.0",
     "gpxpy>=1.6.2,<2.0",
 ]
@@ -22,6 +22,6 @@ only-include = ["aaa.py"]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.4",
-    "ty>=0.0.20",
+    "ruff>=0.15.7",
+    "ty>=0.0.24",
 ]
