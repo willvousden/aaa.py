@@ -22,6 +22,6 @@ only-include = ["aaa.py"]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.7",
-    "ty>=0.0.24",
+    "ruff>=0.15.14",
+    "ty>=0.0.39",
 ]
